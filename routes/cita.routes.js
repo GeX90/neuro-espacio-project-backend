@@ -85,9 +85,19 @@ router.put("/:citaId", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
 
-    // Verificar que la cita pertenece al usuario autenticado
-    if (cita.usuario.toString() !== usuarioId.toString()) {
+    // Verificar que la cita pertenece al usuario autenticado o que es admin
+    const esAdmin = req.payload.role === "ADMIN";
+    if (cita.usuario.toString() !== usuarioId.toString() && !esAdmin) {
       return res.status(403).json({ message: "No tienes permiso para actualizar esta cita" });
+    }
+
+    // Verificar que falten al menos 48 horas para la cita (solo para usuarios no admin)
+    if (!esAdmin) {
+      const ahora = new Date();
+      const horasRestantes = (cita.fecha - ahora) / (1000 * 60 * 60);
+      if (horasRestantes < 48) {
+        return res.status(403).json({ message: "No puedes editar una cita con menos de 48 horas de anticipación" });
+      }
     }
 
     // Validar fecha si se proporciona
@@ -125,9 +135,19 @@ router.delete("/:citaId", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
 
-    // Verificar que la cita pertenece al usuario autenticado
-    if (cita.usuario.toString() !== usuarioId.toString()) {
+    // Verificar que la cita pertenece al usuario autenticado o que es admin
+    const esAdmin = req.payload.role === "ADMIN";
+    if (cita.usuario.toString() !== usuarioId.toString() && !esAdmin) {
       return res.status(403).json({ message: "No tienes permiso para eliminar esta cita" });
+    }
+
+    // Verificar que falten al menos 48 horas para la cita (solo para usuarios no admin)
+    if (!esAdmin) {
+      const ahora = new Date();
+      const horasRestantes = (cita.fecha - ahora) / (1000 * 60 * 60);
+      if (horasRestantes < 48) {
+        return res.status(403).json({ message: "No puedes eliminar una cita con menos de 48 horas de anticipación" });
+      }
     }
 
     await Cita.findByIdAndDelete(citaId);
