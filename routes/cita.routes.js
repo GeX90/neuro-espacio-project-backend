@@ -28,6 +28,58 @@ router.get("/", isAuthenticated, async (req, res) => {
   }
 });
 
+// GET horarios disponibles para una fecha específica
+router.get("/available/:date", isAuthenticated, async (req, res) => {
+  try {
+    const { date } = req.params;
+    
+    // Validar formato de fecha
+    const fechaDate = new Date(date);
+    if (isNaN(fechaDate.getTime())) {
+      return res.status(400).json({ message: "Fecha inválida. Usa formato ISO: YYYY-MM-DD" });
+    }
+
+    // Validar que sea un día laboral (lunes a viernes)
+    const diaSemana = fechaDate.getDay();
+    if (diaSemana === 0 || diaSemana === 6) {
+      return res.status(400).json({ message: "No hay citas disponibles los fines de semana. Solo de lunes a viernes" });
+    }
+
+    // Obtener todas las citas del día
+    const inicioDelDia = new Date(fechaDate);
+    inicioDelDia.setHours(0, 0, 0, 0);
+    const finDelDia = new Date(fechaDate);
+    finDelDia.setHours(23, 59, 59, 999);
+
+    const citasDelDia = await Cita.find({
+      fecha: { $gte: inicioDelDia, $lte: finDelDia }
+    });
+
+    // Generar horarios disponibles (9-18 con descanso 13-14)
+    const horariosDisponibles = [];
+    const horasOcupadas = new Set(citasDelDia.map(cita => cita.hora));
+
+    for (let hora = 9; hora < 18; hora++) {
+      // Saltar la hora de descanso (13-14)
+      if (hora === 13) continue;
+
+      const horarioFormato = `${String(hora).padStart(2, "0")}:00`;
+      if (!horasOcupadas.has(horarioFormato)) {
+        horariosDisponibles.push(horarioFormato);
+      }
+    }
+
+    res.status(200).json({
+      fecha: date,
+      horariosDisponibles,
+      horariosOcupados: Array.from(horasOcupadas)
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al obtener horarios disponibles", error: error.message });
+  }
+});
+
 // GET una cita específica por ID
 router.get("/:citaId", isAuthenticated, async (req, res) => {
   try {
