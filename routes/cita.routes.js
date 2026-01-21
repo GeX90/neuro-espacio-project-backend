@@ -143,14 +143,16 @@ router.get("/:citaId", isAuthenticated, async (req, res) => {
   try {
     const { citaId } = req.params;
     const usuarioId = req.payload._id;
+    const esAdmin = req.payload.role === "ADMIN";
 
-    const cita = await Cita.findById(citaId);
+    const cita = await Cita.findById(citaId).populate("usuario", "name email");
 
     if (!cita) {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
 
-    if (cita.usuario.toString() !== usuarioId.toString()) {
+    // El admin puede ver cualquier cita, los usuarios solo las suyas
+    if (!esAdmin && cita.usuario._id.toString() !== usuarioId.toString()) {
       return res
         .status(403)
         .json({ message: "No tienes permiso para acceder a esta cita" });

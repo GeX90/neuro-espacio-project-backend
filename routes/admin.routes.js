@@ -48,6 +48,24 @@ router.get("/citas", isAuthenticated, isAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/citas/:citaId - Obtener una cita específica (solo admin)
+router.get("/citas/:citaId", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { citaId } = req.params;
+    
+    const cita = await Cita.findById(citaId).populate("usuario", "name email");
+    
+    if (!cita) {
+      return res.status(404).json({ message: "Cita no encontrada" });
+    }
+    
+    res.status(200).json(cita);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al obtener la cita", error: error.message });
+  }
+});
+
 // PUT /api/admin/citas/:citaId - Editar cualquier cita (solo admin)
 router.put("/citas/:citaId", isAuthenticated, isAdmin, async (req, res) => {
   try {
