@@ -2,14 +2,26 @@
 // https://www.npmjs.com/package/dotenv
 require("dotenv").config();
 
+
+const app = express();
 // ℹ️ Connects to the database
-require("./db");
+const { connectDB } = require("./db");
+
+// Each time a request is made, ensure DB is connected
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (e) {
+        next(e);
+    }
+});
 
 // Handles http requests (express is node js framework)
 // https://www.npmjs.com/package/express
 const express = require("express");
 
-const app = express();
+
 
 // ℹ️ This function is getting exported from the config folder. It runs most pieces of middleware
 require("./config")(app);
