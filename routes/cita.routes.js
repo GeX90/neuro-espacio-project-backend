@@ -213,15 +213,16 @@ router.put("/:citaId", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
 
-    // Verificar permisos: el usuario debe ser dueño de la cita o ser admin
-    if (cita.usuario.toString() !== usuarioId.toString() && !esAdmin) {
-      return res
-        .status(403)
-        .json({ message: "No tienes permiso para actualizar esta cita" });
-    }
-
-    // Solo aplicar restricción de 48 horas a usuarios normales, NO a admins
+    // Si NO es admin, aplicar todas las restricciones
     if (!esAdmin) {
+      // Verificar que sea dueño de la cita
+      if (cita.usuario.toString() !== usuarioId.toString()) {
+        return res
+          .status(403)
+          .json({ message: "No tienes permiso para actualizar esta cita" });
+      }
+
+      // Verificar restricción de 48 horas
       const ahora = new Date();
       const horasRestantes = (cita.fecha - ahora) / (1000 * 60 * 60);
       if (horasRestantes < 48) {
@@ -276,15 +277,16 @@ router.delete("/:citaId", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
 
-    // Verificar permisos: el usuario debe ser dueño de la cita o ser admin
-    if (cita.usuario.toString() !== usuarioId.toString() && !esAdmin) {
-      return res
-        .status(403)
-        .json({ message: "No tienes permiso para eliminar esta cita" });
-    }
-
-    // Solo aplicar restricción de 48 horas a usuarios normales, NO a admins
+    // Si NO es admin, aplicar todas las restricciones
     if (!esAdmin) {
+      // Verificar que sea dueño de la cita
+      if (cita.usuario.toString() !== usuarioId.toString()) {
+        return res
+          .status(403)
+          .json({ message: "No tienes permiso para eliminar esta cita" });
+      }
+
+      // Verificar restricción de 48 horas
       const ahora = new Date();
       const horasRestantes = (cita.fecha - ahora) / (1000 * 60 * 60);
       if (horasRestantes < 48) {
