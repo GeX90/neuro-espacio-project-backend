@@ -93,18 +93,23 @@ El servidor estará disponible en `http://localhost:5005`
 - `POST /auth/login` - Inicio de sesión
 - `GET /auth/verify` - Verificación de token JWT
 
-### Citas (`/api/citas`)
+### Citas (`/api/citas`) - 🔒 Requiere autenticación
 
-- `GET /api/citas` - Obtener todas las citas del usuario autenticado
-- `POST /api/citas` - Crear una nueva cita
-- `GET /api/citas/:id` - Obtener una cita específica
-- `PUT /api/citas/:id` - Actualizar una cita
-- `DELETE /api/citas/:id` - Eliminar una cita
+**Usuarios normales:**
+- `GET /api/citas` - Obtener todas las citas propias
+- `POST /api/citas` - Crear una nueva cita (fecha, hora, motivo)
+- `GET /api/citas/:id` - Obtener detalles de una cita propia
+- `PUT /api/citas/:id` - Actualizar una cita propia (mínimo 48h antes)
+- `DELETE /api/citas/:id` - Cancelar una cita propia (mínimo 48h antes)
+- `GET /api/citas/disponibles` - Consultar fechas disponibles
 
-### Administración (`/api/admin`)
+### Administración (`/api/admin`) - 🔐 Requiere rol ADMIN
 
-- Rutas protegidas para administradores
-- Gestión avanzada de citas y usuarios
+**Administradores:**
+- `GET /api/admin/users` - Obtener lista de todos los usuarios registrados
+- `GET /api/admin/citas` - Obtener todas las citas del sistema
+- `PUT /api/citas/:id` - Editar cualquier cita sin restricciones
+- `DELETE /api/citas/:id` - Eliminar cualquier cita sin restricciones
 
 ### General (`/api`)
 
@@ -135,7 +140,44 @@ El servidor estará disponible en `http://localhost:5005`
 }
 ```
 
-## 🔐 Autenticación
+## � Roles y Funcionalidades
+
+### 🔵 Usuario Normal (USER)
+
+**Gestión de Citas Propias:**
+- ✅ Crear nuevas citas con fecha, hora y motivo
+- ✅ Ver lista de sus propias citas programadas
+- ✅ Ver detalles completos de cada cita
+- ✅ Editar citas (solo con 48 horas de anticipación)
+- ✅ Cancelar citas (solo con 48 horas de anticipación)
+- ✅ Consultar calendario de disponibilidad
+
+**Restricciones:**
+- ❌ No puede ver citas de otros usuarios
+- ❌ No puede modificar citas con menos de 48h de anticipación
+- ❌ No puede acceder a rutas administrativas
+
+### 🔴 Administrador (ADMIN)
+
+**Gestión de Usuarios:**
+- ✅ Ver lista completa de usuarios registrados
+- ✅ Ver información detallada (nombre, email, rol)
+- ✅ Identificar administradores y usuarios normales
+
+**Gestión de Citas:**
+- ✅ Ver todas las citas del sistema
+- ✅ Filtrar citas por usuario, fecha o estado
+- ✅ Editar cualquier cita sin restricciones de tiempo
+- ✅ Cancelar cualquier cita sin restricciones
+- ✅ Ver calendario completo con todas las citas
+- ✅ Acceder a estadísticas de citas (total, confirmadas, pendientes)
+
+**Privilegios Especiales:**
+- ✅ Sin restricciones de 48 horas para modificaciones
+- ✅ Acceso total a todas las funcionalidades
+- ✅ Panel administrativo exclusivo
+
+## �🔐 Autenticación
 
 La API utiliza JWT (JSON Web Tokens) para la autenticación. Para acceder a las rutas protegidas:
 
