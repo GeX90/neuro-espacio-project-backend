@@ -11,13 +11,20 @@ const app = express();
 // ℹ️ Connects to the database
 const { connectDB } = require("./db");
 
+// Connect to DB on startup
+connectDB().catch(err => {
+    console.error("Error inicial de conexión a MongoDB:", err);
+});
+
 // Each time a request is made, ensure DB is connected
 app.use(async (req, res, next) => {
     try {
         await connectDB();
         next();
     } catch (e) {
-        next(e);
+        console.error("Error en middleware de conexión:", e.message);
+        // No bloquear la request, solo logear el error
+        next();
     }
 });
 

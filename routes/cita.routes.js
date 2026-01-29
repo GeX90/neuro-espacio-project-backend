@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 
 const Cita = require("../models/Cita.model");
 const Disponibilidad = require("../models/Disponibilidad.model");
@@ -313,55 +314,73 @@ router.delete("/:citaId", isAuthenticated, async (req, res) => {
 
 // GET /api/citas/disponibilidad - Obtener horarios disponibles para usuarios (público)
 router.get("/disponibilidad", async (req, res) => {
+  // Envolver TODO en try-catch para evitar cualquier error no capturado
   try {
-    console.log("=== Iniciando endpoint /api/citas/disponibilidad ===");
+    console.log("=== INICIO /api/citas/disponibilidad ===");
     
-    // Verificar que el modelo existe
-    if (!Disponibilidad) {
-      console.error("ERROR: Modelo Disponibilidad no está disponible");
+    // 1. Verificar estado de MongoDB
+    const connectionState = mongoose.connection.readyState;
+    console.log("MongoDB state:", connectionState);
+    
+    // 2. Si no está conectado, intentar conectar
+    if (connectionState !== 1) {
+      console.log("Intentando conectar a MongoDB...");
+      try {
+        const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/neuro-espacio-project-backend";
+        await mongoose.connect(MONGO_URI);
+        console.log("✓ MongoDB conectado");
+      } catch (connectError) {
+        console.error("✗ Error conectando a MongoDB:", connectError.message);
+        return res.status(200).json([]);
+      }
+    } else {
+      console.log("✓ MongoDB ya conectado");
+    }
+    
+    // 3. Verificar que el modelo existe
+    if (!Disponibilidad || typeof Disponibilidad.find !== 'function') {
+      console.error("✗ Modelo Disponibilidad no disponible");
       return res.status(200).json([]);
     }
+    console.log("✓ Modelo Disponibilidad disponible");
 
-    console.log("Modelo Disponibilidad cargado correctamente");
-
+    // 4. Construir query
     const { fechaInicio, fechaFin } = req.query;
     console.log("Query params:", { fechaInicio, fechaFin });
     
     const query = { disponible: true };
     if (fechaInicio && fechaFin) {
-      try {
-        const startDate = new Date(fechaInicio);
-        const endDate = new Date(fechaFin);
-        
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          console.error("Fechas inválidas:", { fechaInicio, fechaFin });
-          return res.status(200).json([]);
-        }
-        
-        query.fecha = {
-          $gte: startDate,
-          $lte: endDate
-        };
-      } catch (dateError) {
-        console.error("Error procesando fechas:", dateError);
-        return res.status(200).json([]);
+      const startDate = new Date(fechaInicio);
+      const endDate = new Date(fechaFin);
+      
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+        query.fecha = { $gte: startDate, $lte: endDate };
+        console.log("Query con fechas:", JSON.stringify(query));
+      } else {
+        console.log("Fechas inválidas, usando query básico");
       }
+    } else {
+      console.log("Sin fechas, usando query básico");
     }
 
-    console.log("Query construida:", JSON.stringify(query));
+    // 5. Ejecutar query
+    console.log("Ejecutando Disponibilidad.find...");
+    const disponibilidad = await Disponibilidad.find(query).sort({ fecha: 1, hora: 1 }).lean().exec();
+    console.log(`✓ Query exitoso: ${disponibilidad.length} registros`);
     
-    const disponibilidad = await Disponibilidad.find(query).sort({ fecha: 1, hora: 1 }).lean();
-    console.log(`Encontrados ${disponibilidad ? disponibilidad.length : 0} registros de disponibilidad`);
+    // 6. Enviar respuesta
+    return res.status(200).json(disponibilidad);
     
-    res.status(200).json(disponibilidad || []);
   } catch (error) {
-    console.error("ERROR CRÍTICO en /api/citas/disponibilidad:");
+    // Log completo del error
+    console.error("========== ERROR EN /api/citas/disponibilidad ==========");
+    console.error("Tipo:", error.name);
     console.error("Mensaje:", error.message);
     console.error("Stack:", error.stack);
-    console.error("Nombre:", error.name);
+    console.error("======================================================");
     
-    // Devolver array vacío en lugar de error para no romper el frontend
-    res.status(200).json([]);
+    // Siempre devolver 200 con array vacío para no romper frontend
+    return res.status(200).json([]);
   }
 });
 
