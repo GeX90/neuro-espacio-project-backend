@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const Cita = require("../models/Cita.model");
+const Disponibilidad = require("../models/Disponibilidad.model");
 
 const { isAuthenticated } = require("../middleware/jwt.middleware.js");
 
@@ -307,6 +308,27 @@ router.delete("/:citaId", isAuthenticated, async (req, res) => {
     res
       .status(500)
       .json({ message: "Error al eliminar la cita", error: error.message });
+  }
+});
+
+// GET /api/citas/disponibilidad - Obtener horarios disponibles para usuarios
+router.get("/disponibilidad", isAuthenticated, async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    
+    const query = { disponible: true };
+    if (fechaInicio && fechaFin) {
+      query.fecha = {
+        $gte: new Date(fechaInicio),
+        $lte: new Date(fechaFin)
+      };
+    }
+
+    const disponibilidad = await Disponibilidad.find(query).sort({ fecha: 1, hora: 1 });
+    res.status(200).json(disponibilidad);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al obtener disponibilidad", error: error.message });
   }
 });
 

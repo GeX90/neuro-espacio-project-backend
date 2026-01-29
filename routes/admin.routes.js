@@ -3,6 +3,7 @@ const router = express.Router();
 
 const User = require("../models/User.model");
 const Cita = require("../models/Cita.model");
+const Disponibilidad = require("../models/Disponibilidad.model");
 
 const { isAuthenticated, isAdmin } = require("../middleware/jwt.middleware.js");
 
@@ -242,6 +243,110 @@ router.delete("/users/:userId", isAuthenticated, isAdmin, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error al eliminar el usuario", error: error.message });
+  }
+});
+
+// ========== RUTAS DE DISPONIBILIDAD ==========
+
+// GET /api/admin/disponibilidad - Obtener disponibilidad para un rango de fechas
+router.get("/disponibilidad", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    
+    const query = {};
+    if (fechaInicio && fechaFin) {
+      query.fecha = {
+        $gte: new Date(fechaInicio),
+        $lte: new Date(fechaFin)
+      };
+    }
+
+    const disponibilidad = await Disponibilidad.find(query).sort({ fecha: 1, hora: 1 });
+    res.status(200).json(disponibilidad);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al obtener disponibilidad", error: error.message });
+  }
+});
+
+// POST /api/admin/disponibilidad - Marcar hora como disponible/no disponible
+router.post("/disponibilidad", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { fecha, hora, disponible } = req.body;
+
+    if (!fecha || !hora) {
+      return res.status(400).json({ message: "Fecha y hora son requeridas" });
+    }
+
+    const fechaDate = new Date(fecha);
+    if (isNaN(fechaDate.getTime())) {
+      return res.status(400).json({ message: "Fecha inválida" });
+    }
+
+    // Buscar si ya existe
+    let disponibilidadExistente = await Disponibilidad.findOne({ 
+      fecha: fechaDate, 
+      hora 
+    });
+
+    if (disponibilidadExistente) {
+      // Actualizar
+      disponibilidadExistente.disponible = disponible;
+      await disponibilidadExistente.save();
+      res.status(200).json(disponibilidadExistente);
+    } else {
+      // Crear nuevo
+      const nuevaDisponibilidad = await Disponibilidad.create({
+        fecha: fechaDate,
+        hora,
+        disponible
+      });
+      res.status(201).json(nuevaDisponibilidad);
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al actualizar disponibilidad", error: error.message });
+  }
+});
+
+// PUT /api/admin/disponibilidad/batch - Actualizar múltiples horarios
+router.put("/disponibilidad/batch", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { horarios } = req.body; // Array de { fecha, hora, disponible }
+
+    if (!Array.isArray(horarios) || horarios.length === 0) {
+      return res.status(400).json({ message: "Se requiere un array de horarios" });
+    }
+
+    const resultados = [];
+
+    for (const horario of horarios) {
+      const { fecha, hora, disponible } = horario;
+      const fechaDate = new Date(fecha);
+
+      let disponibilidadExistente = await Disponibilidad.findOne({ 
+        fecha: fechaDate, 
+        hora 
+      });
+
+      if (disponibilidadExistente) {
+        disponibilidadExistente.disponible = disponible;
+        await disponibilidadExistente.save();
+        resultados.push(disponibilidadExistente);
+      } else {
+        const nueva = await Disponibilidad.create({
+          fecha: fechaDate,
+          hora,
+          disponible
+        });
+        resultados.push(nueva);
+      }
+    }
+
+    res.status(200).json(resultados);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al actualizar disponibilidades", error: error.message });
   }
 });
 
