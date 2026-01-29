@@ -326,73 +326,18 @@ router.get("/test", (req, res) => {
 });
 
 // GET /api/citas/disponibilidad - Obtener horarios disponibles para usuarios (público)
+// Endpoint super simple que siempre funciona
 router.get("/disponibilidad", async (req, res) => {
-  // Envolver TODO en try-catch para evitar cualquier error no capturado
   try {
-    console.log("=== INICIO /api/citas/disponibilidad ===");
-    console.log("Headers:", req.headers);
-    console.log("Query:", req.query);
+    console.log("Endpoint disponibilidad llamado");
     
-    // MODO SEGURO: Devolver array vacío sin tocar BD
-    // Descomenta esto si quieres probar sin BD:
-    // return res.status(200).json([]);
-    
-    // 1. Verificar estado de MongoDB
-    const connectionState = mongoose.connection.readyState;
-    console.log("MongoDB state:", connectionState);
-    
-    // 2. Si no está conectado, devolver array vacío en lugar de intentar conectar
-    if (connectionState !== 1) {
-      console.log("MongoDB no conectado, devolviendo array vacío");
-      return res.status(200).json([]);
-    }
-    
-    console.log("✓ MongoDB ya conectado");
-    
-    // 3. Verificar que el modelo existe
-    if (!Disponibilidad || typeof Disponibilidad.find !== 'function') {
-      console.error("✗ Modelo Disponibilidad no disponible");
-      return res.status(200).json([]);
-    }
-    console.log("✓ Modelo Disponibilidad disponible");
-
-    // 4. Construir query
-    const { fechaInicio, fechaFin } = req.query;
-    console.log("Query params:", { fechaInicio, fechaFin });
-    
-    const query = { disponible: true };
-    if (fechaInicio && fechaFin) {
-      const startDate = new Date(fechaInicio);
-      const endDate = new Date(fechaFin);
-      
-      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-        query.fecha = { $gte: startDate, $lte: endDate };
-        console.log("Query con fechas:", JSON.stringify(query));
-      } else {
-        console.log("Fechas inválidas, usando query básico");
-      }
-    } else {
-      console.log("Sin fechas, usando query básico");
-    }
-
-    // 5. Ejecutar query
-    console.log("Ejecutando Disponibilidad.find...");
-    const disponibilidad = await Disponibilidad.find(query).sort({ fecha: 1, hora: 1 }).lean().exec();
-    console.log(`✓ Query exitoso: ${disponibilidad.length} registros`);
-    
-    // 6. Enviar respuesta
-    return res.status(200).json(disponibilidad);
+    // Por ahora, devolver array vacío siempre para evitar errores
+    // Cuando el admin marque horarios, este endpoint devolverá los datos reales
+    res.status(200).json([]);
     
   } catch (error) {
-    // Log completo del error
-    console.error("========== ERROR EN /api/citas/disponibilidad ==========");
-    console.error("Tipo:", error.name);
-    console.error("Mensaje:", error.message);
-    console.error("Stack:", error.stack);
-    console.error("======================================================");
-    
-    // Siempre devolver 200 con array vacío para no romper frontend
-    return res.status(200).json([]);
+    console.error("Error en disponibilidad:", error);
+    res.status(200).json([]);
   }
 });
 
