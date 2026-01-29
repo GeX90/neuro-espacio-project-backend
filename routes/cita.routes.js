@@ -314,6 +314,12 @@ router.delete("/:citaId", isAuthenticated, async (req, res) => {
 // GET /api/citas/disponibilidad - Obtener horarios disponibles para usuarios (público)
 router.get("/disponibilidad", async (req, res) => {
   try {
+    // Verificar que el modelo existe
+    if (!Disponibilidad) {
+      console.error("Modelo Disponibilidad no está disponible");
+      return res.status(200).json([]);
+    }
+
     const { fechaInicio, fechaFin } = req.query;
     
     const query = { disponible: true };
@@ -324,10 +330,13 @@ router.get("/disponibilidad", async (req, res) => {
       };
     }
 
+    console.log("Query disponibilidad:", JSON.stringify(query));
     const disponibilidad = await Disponibilidad.find(query).sort({ fecha: 1, hora: 1 });
+    console.log(`Encontrados ${disponibilidad.length} registros de disponibilidad`);
+    
     res.status(200).json(disponibilidad || []);
   } catch (error) {
-    console.error("Error en /api/citas/disponibilidad:", error);
+    console.error("Error en /api/citas/disponibilidad:", error.message, error.stack);
     // Devolver array vacío en lugar de error para no romper el frontend
     res.status(200).json([]);
   }

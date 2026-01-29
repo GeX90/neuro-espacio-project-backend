@@ -251,6 +251,12 @@ router.delete("/users/:userId", isAuthenticated, isAdmin, async (req, res) => {
 // GET /api/admin/disponibilidad - Obtener disponibilidad para un rango de fechas
 router.get("/disponibilidad", isAuthenticated, isAdmin, async (req, res) => {
   try {
+    // Verificar que el modelo existe
+    if (!Disponibilidad) {
+      console.error("Modelo Disponibilidad no está disponible");
+      return res.status(200).json([]);
+    }
+
     const { fechaInicio, fechaFin } = req.query;
     
     const query = {};
@@ -261,11 +267,14 @@ router.get("/disponibilidad", isAuthenticated, isAdmin, async (req, res) => {
       };
     }
 
+    console.log("Admin query disponibilidad:", JSON.stringify(query));
     const disponibilidad = await Disponibilidad.find(query).sort({ fecha: 1, hora: 1 });
-    res.status(200).json(disponibilidad);
+    console.log(`Admin: Encontrados ${disponibilidad.length} registros`);
+    
+    res.status(200).json(disponibilidad || []);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error al obtener disponibilidad", error: error.message });
+    console.error("Error en admin disponibilidad:", error.message, error.stack);
+    res.status(200).json([]);
   }
 });
 
