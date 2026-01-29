@@ -3,9 +3,17 @@ const router = express.Router();
 const mongoose = require("mongoose");
 
 const Cita = require("../models/Cita.model");
-const Disponibilidad = require("../models/Disponibilidad.model");
 
 const { isAuthenticated } = require("../middleware/jwt.middleware.js");
+
+// Cargar el modelo de forma segura
+let Disponibilidad;
+try {
+  Disponibilidad = require("../models/Disponibilidad.model");
+  console.log("Modelo Disponibilidad cargado correctamente en cita.routes.js");
+} catch (error) {
+  console.error("Error cargando modelo Disponibilidad:", error.message);
+}
 
 router.get("/disponibles", async (req, res) => {
   try {
@@ -312,30 +320,34 @@ router.delete("/:citaId", isAuthenticated, async (req, res) => {
   }
 });
 
+// TEST endpoint - verificar que las rutas funcionan
+router.get("/test", (req, res) => {
+  res.status(200).json({ message: "Test endpoint works!", timestamp: new Date() });
+});
+
 // GET /api/citas/disponibilidad - Obtener horarios disponibles para usuarios (público)
 router.get("/disponibilidad", async (req, res) => {
   // Envolver TODO en try-catch para evitar cualquier error no capturado
   try {
     console.log("=== INICIO /api/citas/disponibilidad ===");
+    console.log("Headers:", req.headers);
+    console.log("Query:", req.query);
+    
+    // MODO SEGURO: Devolver array vacío sin tocar BD
+    // Descomenta esto si quieres probar sin BD:
+    // return res.status(200).json([]);
     
     // 1. Verificar estado de MongoDB
     const connectionState = mongoose.connection.readyState;
     console.log("MongoDB state:", connectionState);
     
-    // 2. Si no está conectado, intentar conectar
+    // 2. Si no está conectado, devolver array vacío en lugar de intentar conectar
     if (connectionState !== 1) {
-      console.log("Intentando conectar a MongoDB...");
-      try {
-        const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/neuro-espacio-project-backend";
-        await mongoose.connect(MONGO_URI);
-        console.log("✓ MongoDB conectado");
-      } catch (connectError) {
-        console.error("✗ Error conectando a MongoDB:", connectError.message);
-        return res.status(200).json([]);
-      }
-    } else {
-      console.log("✓ MongoDB ya conectado");
+      console.log("MongoDB no conectado, devolviendo array vacío");
+      return res.status(200).json([]);
     }
+    
+    console.log("✓ MongoDB ya conectado");
     
     // 3. Verificar que el modelo existe
     if (!Disponibilidad || typeof Disponibilidad.find !== 'function') {
