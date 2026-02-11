@@ -153,7 +153,6 @@ router.get("/available/:date", isAuthenticated, async (req, res) => {
 // IMPORTANTE: Esta ruta debe estar ANTES de /:citaId para evitar que el parámetro dinámico la capture
 router.get("/disponibilidad", async (req, res) => {
   try {
-    console.log("GET /api/citas/disponibilidad - Endpoint público llamado");
     
     if (!Disponibilidad) {
       console.error("Modelo Disponibilidad no está disponible");
@@ -163,18 +162,41 @@ router.get("/disponibilidad", async (req, res) => {
       });
     }
 
+    // Construir el filtro base
+    const filtro = { disponible: true };
+    
+    // Si se proporcionan fechas de rango, filtrar por ellas
+    const { fechaInicio, fechaFin } = req.query;
+    if (fechaInicio && fechaFin) {
+      // Parsear fechas como UTC para manejar correctamente las zonas horarias
+      // Expandimos el rango para capturar cualquier documento que caiga en el mes
+      const inicio = new Date(fechaInicio + 'T00:00:00.000Z');
+      // Retroceder 1 día para capturar registros que puedan tener offset de timezone
+      inicio.setDate(inicio.getDate() - 1);
+      
+      const fin = new Date(fechaFin + 'T23:59:59.999Z');
+      // Avanzar 1 día para capturar registros que puedan tener offset de timezone
+      fin.setDate(fin.getDate() + 1);
+      
+      filtro.fecha = {
+        $gte: inicio,
+        $lte: fin
+      };
+      
+    }
+
     // Obtener todas las fechas/horas marcadas como disponibles
-    const disponibles = await Disponibilidad.find({ disponible: true })
+    const disponibles = await Disponibilidad.find(filtro)
       .sort({ fecha: 1, hora: 1 })
       .lean();
 
-    console.log(`Disponibilidad encontrada: ${disponibles.length} registros`);
     res.status(200).json(disponibles);
   } catch (error) {
     console.error("Error en GET /api/citas/disponibilidad:", error);
     res.status(500).json({ 
       message: "Error al obtener disponibilidad",
-      error: error.message 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
